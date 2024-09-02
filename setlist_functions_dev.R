@@ -63,15 +63,19 @@ getSetlistInfo <- function(artist_name){
   # Assign result of artist selection to an object
   mbid <- getArtistInfo(artist_name)[1,4] 
   
-  # Create the setlist url using the artist code from the artist data function
-  setlists <- paste0(base, artist_url, mbid, "/setlists") 
-  # Get a list of at max, their last 20 shows
-  setlist_list <- GET(setlists, add_headers("x-api-key" = Sys.getenv('SETLISTFM_API_KEY'))) 
-  # Return the number of setlists within this list
-  number_of_setlists <- as.data.frame(lengths(content(setlist_list)))['setlist',1]
-  # Loop across the setlists and return various bits of information about the setlist and venue
-  # then bind these together in a data frame appending each time. Pasting '' at the end of each
-  # value so that it stores a value for it and not NULL if no data available.
+  # Loop through 5 pages of setlists
+  # NOTE: should look for a way to loop through all pages available
+  for(j in 1:5){
+    
+    # Create the setlist url using the artist code from the artist data function
+    setlists <- paste0(base, artist_url, mbid, "/setlists?p=", j) 
+    # Get a list of at max, their last 20 shows
+    setlist_list <- GET(setlists, add_headers("x-api-key" = Sys.getenv('SETLISTFM_API_KEY'))) 
+    # Return the number of setlists within this list
+    number_of_setlists <- as.data.frame(lengths(content(setlist_list)))['setlist',1]
+    # Loop across the setlists and return various bits of information about the setlist and venue
+    # then bind these together in a data frame appending each time. Pasting '' at the end of each
+    # value so that it stores a value for it and not NULL if no data available.
     for(i in 1:number_of_setlists){
       new_data <- cbind(
         'ID' = i,
@@ -85,7 +89,8 @@ getSetlistInfo <- function(artist_name){
       )
       venue_info <- rbind(venue_info, new_data)
     }
-  # Convert the date column to date format
+    
+  }  # Convert the date column to date format
   venue_info$EventDate <- strptime(venue_info$EventDate, format = "%d-%m-%Y")
   # Subset for sets before today and then add an ID number.
   venue_info <- subset(venue_info, as.Date(EventDate) < as.Date(Sys.Date())) %>%
@@ -93,14 +98,14 @@ getSetlistInfo <- function(artist_name){
     relocate(EventID)
   
   print(kable(venue_info[,-2], row.names = F))
-  
+
   setlist.choice <- readline(prompt = "Select the Number of Sets to Include: ")
   
   sets <- venue_info[1:setlist.choice,1]
   
   # print(sets)
   
-  info_needed <- list(content(setlist_list), sets, venue_info)
+  info_needed <- list(content(setlist_list), sets)
   
   # return(venue_info)
   return(info_needed)
@@ -131,7 +136,7 @@ getSongInfo <- function(artist_name){
   for(set in as.numeric(info_needed[[2]])){
     # We need to get the number of sets within each set e.g. main stage, side stage, encore count as 3.
     b <- sum(lengths(info_needed[[1]]$setlist[[set]]$sets))
-    # We only want to continue the process if each setlist has more than zero sets.
+    # We only want to continue the process if each setlist has more than one set.
     if(b > 0){
       
       # The next loop initiated loops across all of the mini sets within the big sets and returns the number
@@ -168,36 +173,36 @@ getSongInfo <- function(artist_name){
     }
   }
   
-  # # The next part of the function is to convert the dataset into a better format.
-  # dataset <- dataset %>%
-  #   # First we remove any whitespace
-  #   mutate(across(.cols = (2:4), ~trimws(.x))) %>%
-  #   # Group by the set number
-  #   group_by(set) %>%
-  #   # Add a row number value for the song position
-  #   mutate(song = row_number()) %>%
-  #   ungroup() %>%
-  #   # Then we want to group by the following to summarise
-  #   group_by(SongName, Cover, OrigArtist) %>%
-  #   # Here we want the songs average position, the number of times played and then the probability
-  #   # that the song will be played.
-  #   summarise(AvgPosition = round(mean(song), 2),
-  #             TimesPlayed = n(),
-  #             ProbPlay = length(unique(set)),
-  #             .groups = 'drop') %>%
-  #   # Then overwrite the ProbPlay column with actual probability
-  #   mutate(ProbPlay = percent(TimesPlayed / max(ProbPlay), accuracy = 0.01)) %>%
-  #   arrange(AvgPosition) %>%
-  #   # Finally filter out blanks
-  #   filter(nchar(trimws(SongName)) > 0)
-  # 
-  # # The final thing is to print out the dataset, removing the cover columns if no covers have been
-  # # performed.
-  # if(sum(as.logical(dataset$Cover)) >= 1){
-  #   print(kable(dataset, row.names = F))
-  # } else {
-  #   print(kable(dataset %>% select(-Cover, -OrigArtist), row.names = F))
-  # }
+  # The next part of the function is to convert the dataset into a better format.
+  dataset <- dataset %>%
+    # First we remove any whitespace
+    mutate(across(.cols = (2:4), ~trimws(.x))) %>%
+    # Group by the set number
+    group_by(set) %>%
+    # Add a row number value for the song position
+    mutate(song = row_number()) %>%
+    ungroup() %>%
+    # Then we want to group by the following to summarise
+    group_by(SongName, Cover, OrigArtist) %>%
+    # Here we want the songs average position, the number of times played and then the probability
+    # that the song will be played.
+    summarise(AvgPosition = round(mean(song), 2),
+              TimesPlayed = n(),
+              ProbPlay = length(unique(set)),
+              .groups = 'drop') %>%
+    # Then overwrite the ProbPlay column with actual probability
+    mutate(ProbPlay = percent(TimesPlayed / max(ProbPlay), accuracy = 0.01)) %>%
+    arrange(AvgPosition) %>%
+    # Finally filter out blanks
+    filter(nchar(trimws(SongName)) > 0)
+  
+  # The final thing is to print out the dataset, removing the cover columns if no covers have been
+  # performed.
+  if(sum(as.logical(dataset$Cover)) >= 1){
+    print(kable(dataset, row.names = F))
+  } else {
+    print(kable(dataset %>% select(-Cover, -OrigArtist), row.names = F))
+  }
   return(dataset)
 }
 

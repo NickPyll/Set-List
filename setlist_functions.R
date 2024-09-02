@@ -10,35 +10,31 @@ getArtistInfo <- function(artist_name){
   #' @return a dataframe containing all of the artists on the site with that name.
   #' 
   
-  # First i make a url using the artists name
-  artist_name_url <- paste0(base, "/1.0/search/artists", "?artistName=", artist_name,
-                            "&sort=sortName")
-  # I then use URLencode to make sure the url is formatted properly to deal with spaces etc.
-  artist_name_url <- URLencode(artist_name_url)
-  # We then retrieve the artist info using the API key i have added above
-  artist_df <- GET(artist_name_url, add_headers("x-api-key" = Sys.getenv('SETLISTFM_API_KEY'))) # NJP moved API key to .Renviron
-  # Make sure to get the content
+  # Create artist url
+  artist_name_url <- URLencode(paste0(base, "/1.0/search/artists", "?artistName=", artist_name, "&sort=sortName"))
+  
+  # Retrieve artist info using API key
+  artist_df <- GET(artist_name_url, add_headers("x-api-key" = Sys.getenv('SETLISTFM_API_KEY'))) 
   artist_df <- suppressMessages(content(artist_df, "text"))
-  # I then convert this to a dataframe, add a row number and then select the appropriate columns
-  artist_df <- as.data.frame(fromJSON(artist_df)$artist) %>%
-    mutate(artist_number = row_number()) %>%
+  
+  # Convert to a dataframe from JSON
+  artist_df <- as.data.frame(fromJSON(artist_df)$artist) |> 
+    mutate(artist_number = row_number()) |> 
     select(artist_number, name, disambiguation, mbid)
   
-  # Check to see if more than 1 artist
+  # Check to see if more than 1 artist return from name search
   if(nrow(artist_df) == 1){
-    # if only one artist then current artist is selected
     correct.artist <- artist_df[1,]
   } else {
     # Print out the table of artists
     print(kable(artist_df, row.names = F))
     cat("\n")
-    # Allow the user to select the correct artist
+    # Prompt user to select the correct artist
     correct.artist <- readline(prompt = "Select the Correct Artist Number: ")
     # Get the row containing the correct artist
     correct.artist <- artist_df[correct.artist,]
   }
   
-  # This dataframe is then returned as an object
   invisible(return(correct.artist))
   
 }
@@ -57,55 +53,50 @@ getSetlistInfo <- function(artist_name){
   # Artist base URL
   artist_url <- "/1.0/artist/"
   
-  # Create an empty data frame
+  # Create an empty data frame to store venue info
   venue_info <- data.frame() 
   
   # Assign result of artist selection to an object
   mbid <- getArtistInfo(artist_name)[1,4] 
   
-  # Loop through 5 pages of setlists
-  # NOTE: should look for a way to loop through all pages available
-  for(j in 1:5){
-    
-    # Create the setlist url using the artist code from the artist data function
-    setlists <- paste0(base, artist_url, mbid, "/setlists?p=", j) 
-    # Get a list of at max, their last 20 shows
-    setlist_list <- GET(setlists, add_headers("x-api-key" = Sys.getenv('SETLISTFM_API_KEY'))) 
-    # Return the number of setlists within this list
-    number_of_setlists <- as.data.frame(lengths(content(setlist_list)))['setlist',1]
-    # Loop across the setlists and return various bits of information about the setlist and venue
-    # then bind these together in a data frame appending each time. Pasting '' at the end of each
-    # value so that it stores a value for it and not NULL if no data available.
-    for(i in 1:number_of_setlists){
-      new_data <- cbind(
-        'ID' = i,
-        'EventDate' = paste0(content(setlist_list)$setlist[[i]]$eventDate, ""),
-        'Country' = paste0(content(setlist_list)$setlist[[i]]$venue$city$country$name, ""),
-        'State' = paste0(content(setlist_list)$setlist[[i]]$venue$city$state, ""),
-        'City' = paste0(content(setlist_list)$setlist[[i]]$venue$city$name, ""),
-        'VenueName' = paste0(content(setlist_list)$setlist[[i]]$venue$name, ""),
-        'Latitude' = paste0(content(setlist_list)$setlist[[i]]$venue$city$coords$lat, ""),
-        'Longitude' = paste0(content(setlist_list)$setlist[[i]]$venue$city$coords$long, "")
-      )
-      venue_info <- rbind(venue_info, new_data)
-    }
-    
-  }  # Convert the date column to date format
+  # Create the setlist url using the artist code from the artist data function
+  setlists <- paste0(base, artist_url, mbid, "/setlists") 
+  # Get a list of at max, their last 20 shows
+  setlist_list <- GET(setlists, add_headers("x-api-key" = Sys.getenv('SETLISTFM_API_KEY'))) 
+  # Return the number of setlists within this list
+  number_of_setlists <- as.data.frame(lengths(content(setlist_list)))['setlist',1]
+  # Loop across the setlists and return various bits of information about the setlist and venue
+  # then bind these together in a data frame appending each time. Pasting '' at the end of each
+  # value so that it stores a value for it and not NULL if no data available.
+  for(i in 1:number_of_setlists){
+    new_data <- cbind(
+      'EventID' = i,
+      'EventDate' = paste0(content(setlist_list)$setlist[[i]]$eventDate, ""),
+      'Country' = paste0(content(setlist_list)$setlist[[i]]$venue$city$country$name, ""),
+      'State' = paste0(content(setlist_list)$setlist[[i]]$venue$city$state, ""),
+      'City' = paste0(content(setlist_list)$setlist[[i]]$venue$city$name, ""),
+      'VenueName' = paste0(content(setlist_list)$setlist[[i]]$venue$name, ""),
+      'Latitude' = paste0(content(setlist_list)$setlist[[i]]$venue$city$coords$lat, ""),
+      'Longitude' = paste0(content(setlist_list)$setlist[[i]]$venue$city$coords$long, "")
+    )
+    venue_info <- rbind(venue_info, new_data)
+  }
+  # Convert the date column to date format
   venue_info$EventDate <- strptime(venue_info$EventDate, format = "%d-%m-%Y")
-  # Subset for sets before today and then add an ID number.
-  venue_info <- subset(venue_info, as.Date(EventDate) < as.Date(Sys.Date())) %>%
-    mutate(EventID = row_number()) %>%
-    relocate(EventID)
+  # Subset for sets before today 
+  venue_info <- subset(venue_info, as.Date(EventDate) < as.Date(Sys.Date()))
   
   print(kable(venue_info[,-2], row.names = F))
-
+  
   setlist.choice <- readline(prompt = "Select the Number of Sets to Include: ")
   
   sets <- venue_info[1:setlist.choice,1]
   
+  venue_info <- venue_info |> head(as.numeric(setlist.choice))
+  
   # print(sets)
   
-  info_needed <- list(content(setlist_list), sets)
+  info_needed <- list(content(setlist_list), sets, venue_info)
   
   # return(venue_info)
   return(info_needed)
@@ -136,7 +127,7 @@ getSongInfo <- function(artist_name){
   for(set in as.numeric(info_needed[[2]])){
     # We need to get the number of sets within each set e.g. main stage, side stage, encore count as 3.
     b <- sum(lengths(info_needed[[1]]$setlist[[set]]$sets))
-    # We only want to continue the process if each setlist has more than one set.
+    # We only want to continue the process if each setlist has more than zero sets.
     if(b > 0){
       
       # The next loop initiated loops across all of the mini sets within the big sets and returns the number
@@ -149,7 +140,7 @@ getSongInfo <- function(artist_name){
         # i have also included code for if there is a cover song. So we return the name of the cover artist also.
         for(j in 1:c){
           # Begin to create the new dataframe by combining the set number and song title.
-          newdata <- cbind('set' = set,
+          newdata <- cbind('EventID' = set,
                            'SongName' = info_needed[[1]]$setlist[[set]]$sets$set[[i]]$song[[j]]$name)
           
           # Next i want to see if the current son gi sa cover song or not. First try and allocate to 't'
@@ -173,37 +164,37 @@ getSongInfo <- function(artist_name){
     }
   }
   
+  venue_info <- as.data.frame(info_needed[[3]])
+  
   # The next part of the function is to convert the dataset into a better format.
-  dataset <- dataset %>%
+  show_detail <- dataset |>
+    inner_join(venue_info, by = 'EventID')
+
+  aggregate <- dataset |> 
     # First we remove any whitespace
-    mutate(across(.cols = (2:4), ~trimws(.x))) %>%
+    mutate(across(.cols = (2:4), ~trimws(.x))) |> 
     # Group by the set number
-    group_by(set) %>%
+    group_by(EventID) |> 
     # Add a row number value for the song position
-    mutate(song = row_number()) %>%
-    ungroup() %>%
+    mutate(song = row_number()) |> 
+    ungroup() |> 
     # Then we want to group by the following to summarise
-    group_by(SongName, Cover, OrigArtist) %>%
+    group_by(SongName, Cover, OrigArtist) |> 
     # Here we want the songs average position, the number of times played and then the probability
     # that the song will be played.
     summarise(AvgPosition = round(mean(song), 2),
               TimesPlayed = n(),
-              ProbPlay = length(unique(set)),
-              .groups = 'drop') %>%
+              ProbPlay = length(unique(EventID)),
+              .groups = 'drop') |> 
     # Then overwrite the ProbPlay column with actual probability
     mutate(ProbPlay = percent(TimesPlayed / max(ProbPlay), accuracy = 0.01)) %>%
-    arrange(AvgPosition) %>%
+    arrange(AvgPosition) |> 
     # Finally filter out blanks
     filter(nchar(trimws(SongName)) > 0)
+
+  output <- list(show_detail, aggregate)
   
-  # The final thing is to print out the dataset, removing the cover columns if no covers have been
-  # performed.
-  if(sum(as.logical(dataset$Cover)) >= 1){
-    print(kable(dataset, row.names = F))
-  } else {
-    print(kable(dataset %>% select(-Cover, -OrigArtist), row.names = F))
-  }
-  return(dataset)
+  return(output)
 }
 
 

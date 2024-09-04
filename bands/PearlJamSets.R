@@ -8,10 +8,19 @@ library(scales)
 library(dplyr)
 library(magrittr)
 
-source('setlist_functions.R')
+source('functions/setlist_functions.R')
 
-# Pearl Jam is artist 6
-pj_raw <- getSongInfo('Pearl Jam')
+# Pull data from setlist.fm API
+# Band Name (required)
+# Musicbrainz Identifier (if known -- else will prompt)
+# Number of shows to analyze (will prompt if left blank)
+pj_raw <- getSongInfo(
+  'Pearl Jam',
+  '83b9cbe7-9857-49e2-ab8e-b57b01038103')
+
+# Function produces two outputs
+pj_raw[[1]] |> View() # Setlist for each event with venue location and date
+pj_raw[[2]] |> View() # Aggregated statistics at song level -- number of times played and average position
 
 pre_bmore_set <-
   pj_raw[[2]] |> 
@@ -21,7 +30,7 @@ dark_matter <- data.frame(
   SongName = c("Scared of Fear", "React, Respond", "Wreckage", "Dark Matter", "Won't Tell", "Upper Hand", "Waiting for Stevie",
                "Running", "Something Special", "Got to Give", "Setting Sun")) |> 
   mutate(dm = 1)
-  
+
 song_ct <-
   pre_bmore_set |> 
   left_join(
@@ -113,9 +122,6 @@ for (i in event_id_list){
   rm(i, var_p, t_p, df)
 
 }
-
-
-
 
 event_uniqueness <-
   event_uniqueness |> 

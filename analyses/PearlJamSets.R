@@ -15,6 +15,11 @@ pj <- getSongInfo(
   'Pearl Jam',
   '83b9cbe7-9857-49e2-ab8e-b57b01038103')
 
+source("data/pj_albums.R")
+
+pj |> 
+  mutate(EventID = as.numeric(EventID)) |> 
+  View()
 # Dark Matter Tour ----
 # The Dark Matter Tour kicked off May 4, 2024
 # and will end November 21, 2024
@@ -29,23 +34,27 @@ dm <- getSongAgg(dm)
 dm <-
   dm |> 
   left_join(
-    dark_matter, by = 'SongName') |> 
-  mutate(across(everything(), ~replace_na(.x, 0))) |> 
-  mutate(SongType = as.factor(if_else(Cover == 'TRUE', 'cov',
-                                      if_else(dm == 1, 'dm', 'prev'))),
-         OrigArtist = if_else(Cover == FALSE, 'Pearl Jam', OrigArtist))
-
-# song_count <- dm |> tally() |> pull()
+    album.dark_matter, by = 'SongName') |> 
+  # mutate(across(everything(), ~replace_na(.x, 0))) 
+  mutate(
+    SongType = 
+      as.factor(if_else(Cover == 'TRUE', 'cov',
+                if_else(album == 'Dark Matter', 'dm', 'prev'))),
+    OrigArtist = if_else(Cover == FALSE, 'Pearl Jam', OrigArtist))
 
 dm |> 
   # filter(Cover == 'FALSE') |> 
-  # filter(TimesPlayed > 1 | dm == 1) |> 
+  # filter(TimesPlayed > 1) |> 
   ggplot(aes(x = reorder(SongName, TimesPlayed), y = p, fill = SongType)) +
   geom_bar(stat = "identity") +
   scale_fill_manual(
     labels = c('Cover Song', 'Dark Matter', 'Previous Album'),
     values = c('#25591f', '#A42820', 'grey70')) +
   coord_flip() +
+  theme(
+    legend.position = c(.7, .2),
+    legend.direction = 'vertical',
+    legend.title = element_blank()) +
   labs(
     x = NULL,
     y = NULL,
@@ -54,14 +63,53 @@ dm |>
     caption = '^Source: All 2024 performances from setlist.fm'
   ) +
   scale_y_continuous(labels = scales::percent)
+# 1100 x 1700 <- good export dimensions
 
 # Album Presence on Tour -----
 
-source('data/pj_albums.R')
+pj_album <-
+  pj |> 
+  left_join(
+    bind_rows(mget(ls(pattern = "^album."))),
+    by = 'SongName'
+  ) |> 
+  mutate(album = if_else(is.na(album) & Cover == TRUE, 'Other', album)) |> 
+  mutate(album = factor(album, levels = levels_album))
+
+# pj_album |> 
+#   filter(
+#     is.na(album),
+#     Cover == 'FALSE') |> 
+#   distinct(SongName) |> 
+#   View()
+
+pj_album |> 
+  filter(!is.na(album)) |> 
+  # filter(album %in% c('Ten', 'Vs', 'Yield')) |> 
+  mutate(month = floor_date(as.Date(EventDate), 'month')) |> 
+  group_by(
+    month, 
+    album) |> 
+  summarize(count = n(), .groups = 'drop_last') |> 
+  mutate(freq = count / sum(count)) |> 
+  ungroup() |> 
+  ggplot(aes(x = month, y = freq, group = album, color = album, linetype = album)) +
+  geom_line(linewidth = 1) +
+  theme(
+    legend.title = element_blank(),
+    legend.direction = 'vertical',
+    legend.position = 'right'
+  ) +
+  scale_color_manual(values = colors_album) +
+  scale_linetype_manual(values = linetypes_album) +
+  scale_y_continuous(labels = scales::percent) 
 
 
 
-# 1100 x 1700 <- good export dimensions
+
+
+
+
 
 # population <- dm |> 
 #   select(p) |> 

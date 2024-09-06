@@ -5,21 +5,22 @@ venue_info <- data.frame()
 content_list <- list()
 k <- 0
 
-total_events <- 
-  round(content(GET(paste0(base, artist_url, mbid, "/setlists"),
-    add_headers("x-api-key" = Sys.getenv('SETLISTFM_API_KEY'))))$total)
+# total_events <- 
+#   round(content(GET(paste0(base, artist_url, mbid, "/setlists"),
+#     add_headers("x-api-key" = Sys.getenv('SETLISTFM_API_KEY'))))$total)
 
-events_per_page <- 
-  round(content(GET(paste0(base, artist_url, mbid, "/setlists"),
-    add_headers("x-api-key" = Sys.getenv('SETLISTFM_API_KEY'))))$itemsPerPage)
+# events_per_page <- 
+#   round(content(GET(paste0(base, artist_url, mbid, "/setlists"),
+#     add_headers("x-api-key" = Sys.getenv('SETLISTFM_API_KEY'))))$itemsPerPage)
 
-pages <- round(total_events / events_per_page)
+# pages <- round(total_events / events_per_page)
+pages <- 5
 
 for(page in 1:pages){
   
-  print(page)
+  print(paste0('Scraping page ', page, ' of ', pages))
   setlists <- paste0(base, artist_url, mbid, "/setlists?p=", page) 
-  setlist_list <- GET(setlists, add_headers("x-api-key" = Sys.getenv('SETLISTFM_API_KEY'))) 
+  setlist_list <- GET(setlists, add_headers("x-api-key" = Sys.getenv('SETLISTFM_API_KEY')))
   number_of_setlists <- as.data.frame(lengths(content(setlist_list)))['setlist',1]
   for(i in 1:number_of_setlists){
     new_data <- cbind(
@@ -38,4 +39,55 @@ for(page in 1:pages){
 
   content_list[[page]] <- content(setlist_list)
 
+  Sys.sleep(2)
+
 }  
+
+venue_info$EventDate <- strptime(venue_info$EventDate, format = "%d-%m-%Y")
+venue_info <- subset(venue_info, as.Date(EventDate) < as.Date(Sys.Date()))
+
+info_needed <- list(content_list, venue_info, pages)
+
+dataset <- data.frame()
+k <- min(as.numeric(info_needed[[2]]$EventID)) - 2 # NOTE: this logic isn't quite right
+pages <- info_needed[[3]]
+
+for(page in 1:pages){
+  events <- info_needed[[1]][[page]]$itemsPerPage
+
+  for(event in 1:events){
+    print(paste0('Preparing page ', page, ' of ', pages, ': event ', event, ' of ', events))
+
+
+    number_sets <- sum(lengths(info_needed[[1]][[page]]$setlist[[event]]$sets))
+    if(number_sets > 0){
+      for(set in 1:number_sets){
+        song_count <- length(lengths(info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song))
+        for(song in 1:song_count){
+          newdata <- cbind('EventID' = event + k,
+                          'SongName' = info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$name)
+          t <- try(info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$cover$name)
+          if("NULL" %in% class(t)){
+            newdata <- cbind(newdata,
+                            'Cover' = FALSE,
+                            'OrigArtist' = 'N/A')
+          } else {
+            newdata <- cbind(newdata,
+                            'Cover' = TRUE,
+                            'OrigArtist' = info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$cover$name)
+          }
+          dataset <- rbind(dataset, newdata)
+        }
+      }
+    }
+  }
+
+  k <- event + k
+}
+
+venue_info <- as.data.frame(info_needed[[2]])
+  
+show_detail <- dataset |>
+  inner_join(venue_info, by = 'EventID')
+
+output <- show_detail

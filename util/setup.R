@@ -16,9 +16,6 @@ theme_setlist <-
       panel.grid.minor.x = element_blank(),
       title = element_text(size = 26, color = 'grey30'),
       text = element_text(color = 'grey40', family = 'Lato'),
-      legend.position = c(.7, .2),
-      legend.direction = 'vertical',
-      legend.title = element_blank(),
       plot.title.position = "plot",
       plot.caption = element_text(color = 'grey40', family = 'Lato', size = 14)
   )

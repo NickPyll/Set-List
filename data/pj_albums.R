@@ -1,69 +1,69 @@
 # studio albums ----
 
 album.dark_matter <- data.frame(
-  SongName = c("Scared of Fear", "React, Respond", "Wreckage", "Dark Matter", "Won't Tell", "Upper Hand", "Waiting for Stevie",
+  song_name = c("Scared of Fear", "React, Respond", "Wreckage", "Dark Matter", "Won't Tell", "Upper Hand", "Waiting for Stevie",
                "Running", "Something Special", "Got to Give", "Setting Sun")) |> 
-  mutate(year = 2024, detail = '', album = 'Dark Matter')
+  mutate(year_released = 2024, album_detail = '', album = 'Dark Matter')
 
 album.gigaton <- data.frame(
-  SongName = c("Who Ever Said", "Superblood Wolfmoon", "Dance of the Clairvoyants", "Quick Escape", "Alright", "Seven O'Clock",
+  song_name = c("Who Ever Said", "Superblood Wolfmoon", "Dance of the Clairvoyants", "Quick Escape", "Alright", "Seven O'Clock",
                "Never Destination", "Take the Long Way", "Buckle Up", "Comes Then Goes", "Retrograde", "River Cross")) |> 
-  mutate(year = 2020, detail = '', album = 'Gigaton')
+  mutate(year_released = 2020, album_detail = '', album = 'Gigaton')
 
 album.lightning_bolt <- data.frame(
-  SongName = c("Getaway", "Mind Your Manners", "My Father's Son", "Sirens", "Lightning Bolt", "Infallible", "Pendulum", 
+  song_name = c("Getaway", "Mind Your Manners", "My Father's Son", "Sirens", "Lightning Bolt", "Infallible", "Pendulum", 
                "Swallowed Whole", "Let the Records Play", "Sleeping by Myself", "Yellow Moon", "Future Days")) |> 
-  mutate(year = 2013, detail = '', album = 'Lightning Bolt')
+  mutate(year_released = 2013, album_detail = '', album = 'Lightning Bolt')
 
 album.backspacer <- data.frame(
-  SongName = c("Gonna See My Friend", "Got Some", "The Fixer", "Johnny Guitar", "Just Breathe", "Amongst the Waves", 
+  song_name = c("Gonna See My Friend", "Got Some", "The Fixer", "Johnny Guitar", "Just Breathe", "Amongst the Waves", 
                "Unthought Known", "Supersonic", "Speed of Sound", "Force of Nature", "The End")) |> 
-  mutate(year = 2009, detail = '', album = 'Backspacer')
+  mutate(year_released = 2009, album_detail = '', album = 'Backspacer')
 
 album.pearl_jam <- data.frame(
-  SongName = c("Life Wasted", "World Wide Suicide", "Comatose", "Severed Hand", "Marker in the Sand", "Parachutes", 
+  song_name = c("Life Wasted", "World Wide Suicide", "Comatose", "Severed Hand", "Marker in the Sand", "Parachutes", 
                "Unemployable", "Big Wave", "Gone", "Wasted Reprise", "Army Reserve", "Come Back", "Inside Job")) |> 
-  mutate(year = 2006, detail = '', album = 'Pearl Jam')
+  mutate(year_released = 2006, album_detail = '', album = 'Pearl Jam')
         
 album.riot_act <- data.frame(
-  SongName = c("Can't Keep", "Save You", "Love Boat Captain", "Cropduster", "Ghost", "I Am Mine", "Thumbing My Way", 
+  song_name = c("Can't Keep", "Save You", "Love Boat Captain", "Cropduster", "Ghost", "I Am Mine", "Thumbing My Way", 
                "You Are", "Get Right", "Green Disease", "Help Help", "Bu$hleaguer", "1/2 Full", "Arc", "All or None")) |> 
-  mutate(year = 2002, detail = '', album = 'Riot Act')
+  mutate(year_released = 2002, album_detail = '', album = 'Riot Act')
     
 album.binaural <- data.frame(
-  SongName = c("Breakerfall", "Gods' Dice", "Evacuation", "Light Years", "Nothing as It Seems", "Thin Air", "Insignificance", 
+  song_name = c("Breakerfall", "Gods' Dice", "Evacuation", "Light Years", "Nothing as It Seems", "Thin Air", "Insignificance", 
                "Of the Girl", "Grievance", "Rival", "Sleight of Hand", "Soon Forget", "Parting Ways")) |> 
-  mutate(year = 2000, detail = '', album = 'Binaural')
+  mutate(year_released = 2000, album_detail = '', album = 'Binaural')
     
 album.yield <- data.frame(
-  SongName = c("Brain of J.", "Faithfull", "No Way", "Given to Fly", "Wishlist", "Pilate", "Do the Evolution", "Red Bar", 
+  song_name = c("Brain of J.", "Faithfull", "No Way", "Given to Fly", "Wishlist", "Pilate", "Do the Evolution", "Red Bar", 
                "MFC", "Low Light", "In Hiding", "Push Me, Pull Me", "All Those Yesterdays")) |> 
-  mutate(year = 1998, detail = '', album = 'Yield')
+  mutate(year_released = 1998, album_detail = '', album = 'Yield')
     
 album.no_code <- data.frame(
-  SongName = c("Sometimes", "Hail, Hail", "Who You Are", "In My Tree", "Smile", "Off He Goes", "Habit", "Red Mosquito", 
+  song_name = c("Sometimes", "Hail, Hail", "Who You Are", "In My Tree", "Smile", "Off He Goes", "Habit", "Red Mosquito", 
                "Lukin", "Present Tense", "Mankind", "I'm Open", "Around the Bend")) |> 
-  mutate(year = 1996, detail = '', album = 'No Code')
+  mutate(year_released = 1996, album_detail = '', album = 'No Code')
     
 album.vitalogy <- data.frame(
-  SongName = c("Last Exit", "Spin the Black Circle", "Not for You", "Tremor Christ", "Nothingman", "Whipping", "Pry, To", 
+  song_name = c("Last Exit", "Spin the Black Circle", "Not for You", "Tremor Christ", "Nothingman", "Whipping", "Pry, To", 
                "Corduroy", "Bugs", "Satan's Bed", "Better Man", "Aye Davanita", "Immortality", "Hey Foxymophandlemama, That's Me")) |> 
-  mutate(year = 1994, detail = '', album = 'Vitalogy')
+  mutate(year_released = 1994, album_detail = '', album = 'Vitalogy')
     
 album.vs <- data.frame(
-  SongName = c("Go", "Animal", "Daughter", "Glorified G", "Dissident", "W.M.A.", "Blood", "Rearviewmirror", "Rats", 
+  song_name = c("Go", "Animal", "Daughter", "Glorified G", "Dissident", "W.M.A.", "Blood", "Rearviewmirror", "Rats", 
                "Elderly Woman Behind the Counter in a Small Town", "Leash", "Indifference")) |> 
-  mutate(year = 1993, detail = '', album = 'Vs')
+  mutate(year_released = 1993, album_detail = '', album = 'Vs')
 
 album.ten <- data.frame(
-  SongName = c("Once", "Even Flow", "Alive", "Why Go", "Black", "Jeremy", "Oceans", "Porch", "Garden", "Deep", "Release")) |> 
-  mutate(year = 1991, detail = '', album = 'Ten')
+  song_name = c("Once", "Even Flow", "Alive", "Why Go", "Black", "Jeremy", "Oceans", "Porch", "Garden", "Deep", "Release")) |> 
+  mutate(year_released = 1991, album_detail = '', album = 'Ten')
        
 # b sides and such ----
 
 album.bsides <-
   tribble(
-    ~SongName, ~year, ~detail,
+    ~song_name, ~year_released, ~album_detail,
     'Wash', 1991, 'Alive single',
     'Let Me Sleep', 1991, 'Ten Club Christmas single',
     'Yellow Ledbetter', 1992, 'Jeremy single',
@@ -101,7 +101,7 @@ album.bsides <-
 
 album.soundtracks <-
   tribble(
-    ~SongName, ~year, ~detail,
+    ~song_name, ~year_released, ~album_detail,
     "Breath",  1992, 'Singles soundtrack',
     "State of Love and Trust", 1992, 'Singles soundtrack',
     'Hard to Imagine', 1997, 'Chicago Cab soundtrack',
@@ -109,13 +109,13 @@ album.soundtracks <-
   ) |>
   mutate(album = 'Other')
 
-levels_album <- 
+levels.album <- 
   c('Ten', 'Vs', 'Vitalogy', 'No Code', 
     'Yield', 'Binaural', 'Riot Act', 'Pearl Jam', 
     'Backspacer', 'Lightning Bolt', 'Gigaton', 'Dark Matter', 
     'Other')
 
-colors_album <- 
+colors.album <- 
   colorRampPalette(
     colors =
       c('#A53F60', '#E67C3D', '#1D1D1D', '#BDC5CB', 
@@ -123,7 +123,7 @@ colors_album <-
         '#535058', '#B81A1D', '#415975', '#95871d',
         'grey42'))(13)
 
-linetypes_album <-
+linetypes.album <-
   c('solid', 'solid', 'solid', 'solid', 
     'dashed', 'solid', 'solid', 'solid',
     'dashed', 'dotted', 'dotted', 'dashed',

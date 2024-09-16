@@ -59,7 +59,7 @@ getSetlistInfo <- function(artist_name, mbid){
   # Create an empty list to store sets
   content_list <- list()
 
-  # counter to help align EventIDs -- otherwise starts over every 20
+  # counter to help align event_ids -- otherwise starts over every 20
   k <- 0
 
   # Pull total event count for the artists
@@ -77,7 +77,7 @@ getSetlistInfo <- function(artist_name, mbid){
   
   # Loop through all pages (can hardcode for testing)
   pages <- total_pages
-  # pages <- 5
+  # pages <- 3
   
   for(page in 1:pages){
     
@@ -97,21 +97,21 @@ getSetlistInfo <- function(artist_name, mbid){
     # value so that it stores a value for it and not NULL if no data available.
     for(i in 1:number_of_setlists){
       new_data <- cbind(
-        'EventID' = i + k,
-        'EventDate' = paste0(content(setlist_list)$setlist[[i]]$eventDate, ""),
-        'Country' = paste0(content(setlist_list)$setlist[[i]]$venue$city$country$name, ""),
-        'State' = paste0(content(setlist_list)$setlist[[i]]$venue$city$state, ""),
-        'City' = paste0(content(setlist_list)$setlist[[i]]$venue$city$name, ""),
-        'VenueName' = paste0(content(setlist_list)$setlist[[i]]$venue$name, ""),
-        'Latitude' = paste0(content(setlist_list)$setlist[[i]]$venue$city$coords$lat, ""),
-        'Longitude' = paste0(content(setlist_list)$setlist[[i]]$venue$city$coords$long, "")
+        'event_id' = i + k,
+        'event_date' = paste0(content(setlist_list)$setlist[[i]]$eventDate, ""),
+        'country' = paste0(content(setlist_list)$setlist[[i]]$venue$city$country$name, ""),
+        'state' = paste0(content(setlist_list)$setlist[[i]]$venue$city$state, ""),
+        'city' = paste0(content(setlist_list)$setlist[[i]]$venue$city$name, ""),
+        'venue_name' = paste0(content(setlist_list)$setlist[[i]]$venue$name, ""),
+        'latitude' = paste0(content(setlist_list)$setlist[[i]]$venue$city$coords$lat, ""),
+        'longitude' = paste0(content(setlist_list)$setlist[[i]]$venue$city$coords$long, "")
       )
 
       # add loop data to the main dataframe
       venue_info <- rbind(venue_info, new_data)
     }
 
-    # iterate counter for EventID
+    # iterate counter for event_id
     k <- i + k
 
     # add the page content into the list
@@ -123,10 +123,10 @@ getSetlistInfo <- function(artist_name, mbid){
   }  
 
   # Convert the date column to date format
-  venue_info$EventDate <- strptime(venue_info$EventDate, format = "%d-%m-%Y")
+  venue_info$event_date <- strptime(venue_info$event_date, format = "%d-%m-%Y")
 
   # Subset for sets before today 
-  venue_info <- subset(venue_info, as.Date(EventDate) < as.Date(Sys.Date()))
+  venue_info <- subset(venue_info, as.Date(event_date) < as.Date(Sys.Date()))
   
   # last page will have fewer than 20 events - modulo finds remainder
   remainder_events <- total_events %% events_per_page
@@ -163,8 +163,8 @@ getSongInfo <- function(artist_name, mbid = NULL){
   # Create a blank dataframe which can be used to store the results
   setlist_info <- data.frame()
   
-  # counter to help align EventIDs -- otherwise starts over every 20
-  k <- min(as.numeric(info_needed[[2]]$EventID)) - 2 # NOTE: still not sure this is working correctly
+  # counter to help align event_ids -- otherwise starts over every 20
+  k <- min(as.numeric(info_needed[[2]]$event_id)) - 2 # NOTE: still not sure this is working correctly
   
   # pull pages parameter from last function
   pages <- info_needed[[3]]
@@ -204,8 +204,8 @@ getSongInfo <- function(artist_name, mbid = NULL){
           for(song in 1:song_count){
 
             # Begin to create the new dataframe by combining the set number and song title.
-            newdata <- cbind('EventID' = event + k,
-                             'SongName' = info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$name)
+            newdata <- cbind('event_id' = event + k,
+                             'song_name' = info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$name)
             
             # Next i want to see if the current song is a cover song or not. First try and allocate to 't'
             t <- try(info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$cover$name)
@@ -213,12 +213,12 @@ getSongInfo <- function(artist_name, mbid = NULL){
             # If class of 't' is NULL then it is not a cover song, else it is a cover song and grab the artist name
             if("NULL" %in% class(t)){
               newdata <- cbind(newdata,
-                              'Cover' = FALSE,
-                              'OrigArtist' = 'N/A')
+                              'cover' = FALSE,
+                              'original_artist' = 'N/A')
             } else {
               newdata <- cbind(newdata,
-                              'Cover' = TRUE,
-                              'OrigArtist' = info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$cover$name)
+                              'cover' = TRUE,
+                              'original_artist' = info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$cover$name)
             }
             
             # Bind the new data and the old data together in a dataset.
@@ -228,7 +228,7 @@ getSongInfo <- function(artist_name, mbid = NULL){
       }
     }
       
-    # iterate counter for EventID
+    # iterate counter for event_id
     k <- event + k
   }
   
@@ -237,7 +237,11 @@ getSongInfo <- function(artist_name, mbid = NULL){
   
   # join setlist_info to venue_info
   show_detail <- setlist_info |>
-    inner_join(venue_info, by = 'EventID')
+    inner_join(venue_info, by = 'event_id') |> 
+    group_by(event_id) |> 
+    # Add a row number value for the song position
+    mutate(song_position = row_number()) |> 
+    ungroup() 
 
   # organize output into r session
   output <- show_detail
@@ -259,37 +263,30 @@ aggregate <- input_data |>
   # First we remove any whitespace
   mutate(across(.cols = (2:4), ~trimws(.x))) |> 
   
-  group_by(EventID) |> 
-  
-  # Add a row number value for the song position
-  mutate(song = row_number()) |> 
-  ungroup() |> 
-
   # Then we want to group by the following to summarise
-  group_by(SongName, Cover, OrigArtist) |> 
+  group_by(song_name, cover, original_artist) |> 
   
   # Here we want the songs average position, the number of times played and then the probability
   # that the song will be played.
-  summarise(AvgPosition = round(mean(song), 2),
-            TimesPlayed = n(),
-            ProbPlay = length(unique(EventID)),
-            .groups = 'drop') |> 
+  summarise(
+    avg_song_position = mean(song_position),
+    times_played = n(),
+    num_events = length(unique(event_id)),
+    .groups = 'drop') |> 
   
   # Then overwrite the ProbPlay column with actual probability
   mutate(
-    ProbPlay = percent(TimesPlayed / max(ProbPlay), accuracy = 0.01),
-    p = as.numeric(gsub('%', '', ProbPlay)) / 100,
-    FreqBin =
+    p = times_played / max(num_events),
+    p_bin =
       case_when(
         p < .1 ~ 'Rare',
         p < .5 ~ 'Unlikely',
         p < .75 ~ 'Likely',
         p <= 1 ~ 'Standards'
         )) |> 
-  arrange(AvgPosition) |> 
-  
+
   # Finally filter out blanks
-  filter(nchar(trimws(SongName)) > 0)
+  filter(nchar(trimws(song_name)) > 0)
 }
 
 

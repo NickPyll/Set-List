@@ -7,6 +7,8 @@ library(jsonlite)
 library(scales)
 library(dplyr)
 library(magrittr)
+library(plotly)
+library(janitor)
 
 theme_setlist <-
   theme_wsj() +

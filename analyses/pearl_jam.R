@@ -12,7 +12,7 @@ source('util/setlist_functions.R')
 source("data/pj_albums.R")
 
 # my shows
-np.shows <- c('1996-10-04', '2000-08-03', '2003-04-15', '2016-04-21', '2022-09-22', '2024-09-12')
+np.shows <- c('1996-10-04', '1998-08-31', '2000-08-03', '2003-04-15', '2016-04-21', '2022-09-22', '2024-09-12')
 
 # Pull data from setlist.fm API
 # Band Name (required)
@@ -313,6 +313,15 @@ pj.setlists |>
 # when have these songs appeared on same set
 song.list <- c("Breath", "State of Love and Trust", "Chloe Dancer/Crown of Thorns")
 # song.list <- c("Footsteps", "Crazy Mary")
+# song.list <- c("Harvest Moon")
+
+
+pj.agg <- getSongAgg(pj.setlists) |> 
+  full_join(
+    bind_rows(mget(ls(pattern = "^album."))),
+    by = 'song_name') |> 
+  mutate(
+    album = if_else(!is.na(album), album, 'Cover Song')) 
 
 pj.setlists |> 
   filter(song_name %in% song.list) |> 
@@ -321,7 +330,7 @@ pj.setlists |>
   filter(count == length(song.list)) |> 
   select(event_id) |> 
   inner_join(pj.setlists, by = 'event_id') |> 
-  # distinct(event_date, venue_name, city) |> 
+  distinct(event_date, venue_name, city) |> 
   View()
 
 # Quantifying event uniqueness ----
@@ -441,6 +450,11 @@ dm.event.uniqueness <-
     dim_mean = 1 - mean_p,
     uniqueness_factor = dim_rare * dim_opener * dim_var * dim_mean
   )
+
+  dm.event.uniqueness |> 
+    select(event_date, venue_name, city, state, uniqueness_factor) |> 
+    arrange(desc(uniqueness_factor)) |> 
+    View()
 
 dm.tour |> 
   filter(city == 'Las Vegas', event_date == '2024-05-16') |> 

@@ -1,5 +1,7 @@
 base <- "https://api.setlist.fm/rest"
 
+# These functions heavily inspired by and borrowed from Ben Cross.
+
 #----ARTIST INFORMATION FUNCTION-----# ####
 getArtistInfo <- function(artist_name){
   #' This function takes an artists name and returns a table containing all of the artists

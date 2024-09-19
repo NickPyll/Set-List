@@ -9,7 +9,7 @@ getArtistInfo <- function(artist_name){
   #' 
   #' @param artist_name - An artists name wrapped in quotes.
   #' 
-  #' @return a dataframe containing all of the artists on the site with that name.
+  #' @return The artist's Musicbrainz identifier (MBID).
   #' 
   
   # Create artist url
@@ -51,6 +51,9 @@ getSetlistInfo <- function(artist_name, mbid){
   #' @param artist_name - The name of the artist you wish to search
   #' @param mbid - The Musicbrainz Identifier (if known)
   #' 
+  #' @return - A list of information necessary for getSongInfo function
+  #' 
+
   
   # Artist base URL
   artist_url <- "/1.0/artist/"

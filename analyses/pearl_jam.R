@@ -3,8 +3,8 @@
 
 # Setup ----
 
-source('util/setup.R')
-source('util/setlist_functions.R')
+source("util/setup.R")
+source("util/setlist_functions.R")
 
 # Load Data ----
 
@@ -12,301 +12,336 @@ source('util/setlist_functions.R')
 source("data/pj_albums.R")
 
 # my shows
-np.shows <- c('1996-10-04', '1998-08-31', '2000-08-03', '2003-04-15', '2016-04-21', '2022-09-22', '2024-09-12')
+np.shows <- c("1996-10-04", "1998-08-31", "2000-08-03", "2003-04-15", "2016-04-21", "2022-09-22", "2024-09-12")
 
 # Pull data from setlist.fm API
 # Band Name (required)
 # Musicbrainz Identifier (if known -- else will prompt)
 pj.setlists <- getSongInfo(
-  'Pearl Jam',
-  '83b9cbe7-9857-49e2-ab8e-b57b01038103') |>
+  "Pearl Jam",
+  "83b9cbe7-9857-49e2-ab8e-b57b01038103"
+) |>
   full_join(
     bind_rows(mget(ls(pattern = "^album."))),
-    by = 'song_name'
-  ) |> 
+    by = "song_name"
+  ) |>
   mutate(
-    album = if_else(is.na(album) & cover == TRUE, 'Other', album),
+    album = if_else(is.na(album) & cover == TRUE, "Other", album),
     album = factor(album, levels = levels.album),
-  ) |> 
+  ) |>
   select(
-    'event_id', 'event_date',
-    'venue_name', 'city', 'state', 'country', 'latitude', 'longitude',
-    'song_position', 'song_name', 'album', 'year_released', 'album_detail', 'cover', 'original_artist'
-)
+    "event_id", "event_date",
+    "venue_name", "city", "state", "country", "latitude", "longitude",
+    "song_position", "song_name", "album", "year_released", "album_detail", "cover", "original_artist"
+  )
 
 # Dark Matter Tour ----
 # The Dark Matter Tour kicked off May 4, 2024
 # and will end November 21, 2024
 
 # filter to dark matter tour
-dm.tour <- pj.setlists |> 
+dm.tour <- pj.setlists |>
   filter(
-    event_date >= as.Date('2024-05-04'),
-    event_date <= as.Date('2024-09-21'))
+    event_date >= as.Date("2024-05-04"),
+    event_date <= as.Date("2024-11-21")
+  )
 
 # what songs opened dark matter shows
 dm.tour.openers <-
-  dm.tour |> 
-  filter(song_position == 1) |> 
-  group_by(song_name) |> 
-  summarize(opener_count = n(), .groups = 'drop') |> 
-  arrange(desc(opener_count)) 
+  dm.tour |>
+  filter(song_position == 1) |>
+  group_by(song_name) |>
+  summarize(opener_count = n(), .groups = "drop") |>
+  arrange(desc(opener_count))
 
 # whoa some interesting openers...what opened each show?
-dm.tour |> 
-  filter(song_position == 1) |> 
-  select(song_name, event_date, venue_name, city, state, country) |> 
+dm.tour |>
+  filter(song_position == 1) |>
+  select(song_name, event_date, venue_name, city, state, country) |>
   View()
 
 # which albums are most played on this tour
-dm.tour |> 
-  filter(album != 'Cover Song') |> 
-  group_by(album) |> 
-  summarize(count = n()) |> 
+dm.tour |>
+  filter(album != "Cover Song") |>
+  group_by(album) |>
+  summarize(count = n()) |>
   ggplot(aes(x = reorder(album, count), y = count, fill = album)) +
-  geom_bar(stat = 'identity') +
+  geom_bar(stat = "identity") +
   coord_flip() +
   theme(
-    legend.position = 'none'
+    legend.position = "none"
   ) +
-  scale_fill_manual(values = colors_album)
+  scale_fill_manual(values = colors.album)
 
 # aggregate by song
-dm.tour.agg <- getSongAgg(dm.tour) |> 
+dm.tour.agg <- getSongAgg(dm.tour) |>
   full_join(
     bind_rows(mget(ls(pattern = "^album."))),
-    by = 'song_name') |> 
+    by = "song_name"
+  ) |>
   mutate(
     song_type =
-      as.factor(if_else(cover == 'TRUE', 'cov',
-                if_else(album == 'Dark Matter', 'dm', 'prev'))),
-    album = if_else(!is.na(album), album, 'Cover Song')) 
+      as.factor(if_else(cover == "TRUE", "cov",
+        if_else(album == "Dark Matter", "dm", "prev")
+      )),
+    album = if_else(!is.na(album), album, "Cover Song")
+  )
 
 # song frequency on Dark Matter Tour
-dm.tour.agg |> 
-  # filter(Cover == 'FALSE') |> 
+dm.tour.agg |>
+  # filter(Cover == 'FALSE') |>
   filter(
     times_played >= 1,
-    !is.na(song_type)) |> 
+    !is.na(song_type)
+  ) |>
   ggplot(aes(x = reorder(song_name, times_played), y = p, fill = song_type)) +
   geom_bar(stat = "identity") +
   scale_fill_manual(
-    labels = c('Cover Song', 'Dark Matter', 'Previous Album'),
-    values = c('#25591f', '#A42820', 'grey70')) +
+    labels = c("Cover Song", "Dark Matter", "Previous Album"),
+    values = c("#25591f", "#A42820", "grey70")
+  ) +
   coord_flip() +
   theme(
     legend.position = c(.7, .2),
-    legend.direction = 'vertical',
-    legend.title = element_blank()) +
+    legend.direction = "vertical",
+    legend.title = element_blank()
+  ) +
   labs(
     x = NULL,
     y = NULL,
-    title = 'Will you hear your favorite Pearl Jam song?',
-    subtitle = 'Predictions for the 2024 Dark Matter tour^',
-    caption = '^Source: All Dark Matter performances from setlist.fm'
+    title = "Will you hear your favorite Pearl Jam song?",
+    subtitle = "Predictions for the 2024 Dark Matter tour^",
+    caption = "^Source: All Dark Matter performances from setlist.fm"
   ) +
   scale_y_continuous(labels = scales::percent)
 
 # songs played in Baltimore
-dm.tour.agg |> 
-  # filter(Cover == 'FALSE') |> 
+dm.tour.agg |>
+  # filter(Cover == 'FALSE') |>
   filter(
     times_played >= 1,
-    !is.na(song_type)) |> 
+    !is.na(song_type)
+  ) |>
   left_join(
-    dm.tour |> 
-      filter(event_date == '2024-09-12') |> 
-      select(song_name) |> 
+    dm.tour |>
+      filter(event_date == "2024-09-12") |>
+      select(song_name) |>
       mutate(baltimore = 1),
-    by = 'song_name'
-  ) |> 
-  mutate(baltimore = factor(if_else(!is.na(baltimore), 'yes', 'no'), levels = c('yes', 'no'))) |> 
+    by = "song_name"
+  ) |>
+  mutate(baltimore = factor(if_else(!is.na(baltimore), "yes", "no"), levels = c("yes", "no"))) |>
   ggplot(aes(x = reorder(song_name, times_played), y = p, fill = baltimore)) +
   geom_bar(stat = "identity") +
   scale_fill_manual(
-    labels = c('Played in Baltimore', 'Played elsewhere on DM Tour'),
-    values = c('#241773', 'grey70')) +
+    labels = c("Played in Baltimore", "Played elsewhere on DM Tour"),
+    values = c("#241773", "grey70")
+  ) +
   coord_flip() +
   theme(
     legend.position = c(.7, .2),
-    legend.direction = 'vertical',
-    legend.title = element_blank()) +
+    legend.direction = "vertical",
+    legend.title = element_blank()
+  ) +
   labs(
     x = NULL,
     y = NULL,
-    title = 'Baltimore September 12, 2024',
-    caption = '^Source: All Dark Matter performances from setlist.fm'
+    title = "Baltimore September 12, 2024",
+    caption = "^Source: All Dark Matter performances from setlist.fm"
   ) +
   scale_y_continuous(labels = scales::percent)
 # 1100 x 1900 <- good export dimensions
 
 # songs that have not been played on this tour
-dm.tour.agg |> 
-  filter(is.na(times_played)) |> 
-  select(album, song_name) |> 
+dm.tour.agg |>
+  filter(is.na(times_played)) |>
+  select(album, song_name) |>
   View()
 
 # songs rarely played on this tour
-dm.tour.agg |> 
-  filter(times_played < 3) |> 
-  select(album, song_name) |> 
+dm.tour.agg |>
+  filter(times_played < 3) |>
+  select(album, song_name) |>
   View()
 
 # Setlist Prediction ----
 # Creating a process for predicting a setlist
 
 num.songs.played <-
-  dm.tour |> 
-  group_by(event_id) |> 
-  summarize(num.songs.played = n()) |> 
-  summarize(num.songs.played = round(mean(num.songs.played), 0)) |> 
+  dm.tour |>
+  group_by(event_id) |>
+  summarize(num.songs.played = n()) |>
+  summarize(num.songs.played = round(mean(num.songs.played), 0)) |>
   pull()
 
-song.names <- 
-  dm.tour.agg |> 
+song.names <-
+  dm.tour.agg |>
   filter(!is.na(times_played)) |>
-  select(song_name) |> 
+  select(song_name) |>
   pull()
 
-weights <- 
-  dm.tour.agg |> 
+weights <-
+  dm.tour.agg |>
   filter(!is.na(times_played)) |>
-  select(p) |> 
+  select(p) |>
   pull()
 
 predicted.setlist <-
-  sample(song.names, num.songs.played, FALSE, weights) |> 
-  as.data.frame() |> 
-  setNames('song_name') |> 
+  sample(song.names, num.songs.played, FALSE, weights) |>
+  as.data.frame() |>
+  setNames("song_name") |>
   inner_join(
-    dm.tour.agg |> 
+    dm.tour.agg |>
       select(song_name, avg_song_position, p),
-    by = 'song_name') |>
+    by = "song_name"
+  ) |>
   arrange(avg_song_position)
 
 # predicted.setlist |> View()
 
 # from 9-11-24
 predicted.setlist <-
-  c("Long Road", "Present Tense", "Go", "Elderly Woman Behind the Counter in a Small Town",
-    "Given to Fly", "Lukin", "Wreckage", "Daughter", "Dark Matter", "MFC", "Even Flow", 
+  c(
+    "Long Road", "Present Tense", "Go", "Elderly Woman Behind the Counter in a Small Town",
+    "Given to Fly", "Lukin", "Wreckage", "Daughter", "Dark Matter", "MFC", "Even Flow",
     "Out of My Mind", "Won't Tell", "Waiting for Stevie", "Once", "Rearviewmirror",
     "Gimme Some Truth", "Do the Evolution", "Song of Good Hope", "Crazy Mary", "State of Love and Trust",
-    "Alive", "Baba O'Riley", "Setting Sun", "Yellow Ledbetter")
+    "Alive", "Baba O'Riley", "Setting Sun", "Yellow Ledbetter"
+  )
 
 actual.setlist <-
-  dm.tour |> 
-  filter(event_date == '2024-09-12') |> 
-  mutate(correct = if_else(song_name %in% predicted.setlist, 'yes', 'no')) |> 
-  inner_join(dm.tour.agg, by = 'song_name') |> 
-  rename(actual_played = song_name) |> 
-  bind_cols(predicted_played = predicted.setlist) |> 
+  dm.tour |>
+  filter(event_date == "2024-09-12") |>
+  mutate(correct = if_else(song_name %in% predicted.setlist, "yes", "no")) |>
+  inner_join(dm.tour.agg, by = "song_name") |>
+  rename(actual_played = song_name) |>
+  bind_cols(predicted_played = predicted.setlist) |>
   select(actual_played, predicted_played, correct)
 
 # Album Presence on Tour -----
 
-pj.setlists |> 
+pj.setlists |>
   View()
 
 # what songs opened all time
-pj.setlists |> 
-  filter(song_position == 1) |> 
-  group_by(song_name) |> 
-  summarize(count = n(), .groups = 'drop') |> 
-  arrange(desc(count)) |> 
+pj.setlists |>
+  filter(song_position == 1) |>
+  group_by(song_name) |>
+  summarize(count = n(), .groups = "drop") |>
+  arrange(desc(count)) |>
   View()
+
+
+pj.setlists |>
+  filter(song_position == 1) |>
+  group_by(song_name) |>
+  summarize(count = n(), .groups = "drop") |>
+  ggplot(aes(x = reorder(song_name, count), y = count)) +
+  geom_bar(stat = "identity", fill = "#217428") +
+  coord_flip() +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Show Openers Frequency (All-Time)",
+    caption = "^Source: All Pearl Jam performances from setlist.fm"
+  )
+
 
 # whoa some interesting openers...what opened each show?
-pj.setlists |> 
-  filter(song_position == 1) |> 
-  select(song_name, event_date, venue_name, city, state, country) |> 
+pj.setlists |>
+  filter(song_position == 1) |>
+  select(song_name, event_date, venue_name, city, state, country) |>
   View()
 
-# songs that need to be cleaned up 
-pj.setlists |> 
+# songs that need to be cleaned up
+pj.setlists |>
   filter(
     is.na(album),
-    cover == 'FALSE') |> 
-  distinct(song_name) |> 
+    cover == "FALSE"
+  ) |>
+  distinct(song_name) |>
   View()
 
 ggplotly(
-  pj.setlists |> 
-  filter(
-    !is.na(album)
-    # ,album != 'Other'
-  ) |> 
-  mutate(month = floor_date(as.Date(event_date), 'month')) |> 
-  group_by(
-    month, 
-    album) |> 
-  summarize(count = n(), .groups = 'drop_last') |> 
-  mutate(freq = count / sum(count)) |> 
-  ungroup() |> 
-  ggplot(aes(x = month, y = freq, group = album, color = album, linetype = album)) +
-  geom_line(linewidth = 1) +
-  theme(
-    legend.title = element_blank(),
-    legend.direction = 'vertical',
-    legend.position = 'right'
-  ) +
-  scale_color_manual(values = colors.album) +
-  scale_linetype_manual(values = linetypes.album) +
-  scale_y_continuous(labels = scales::percent))
+  pj.setlists |>
+    filter(
+      !is.na(album)
+      # ,album != 'Other'
+    ) |>
+    mutate(month = floor_date(as.Date(event_date), "month")) |>
+    group_by(
+      month,
+      album
+    ) |>
+    summarize(count = n(), .groups = "drop_last") |>
+    mutate(freq = count / sum(count)) |>
+    ungroup() |>
+    ggplot(aes(x = month, y = freq, group = album, color = album, linetype = album)) +
+    geom_line(linewidth = 1) +
+    theme(
+      legend.title = element_blank(),
+      legend.direction = "vertical",
+      legend.position = "right"
+    ) +
+    scale_color_manual(values = colors.album) +
+    scale_linetype_manual(values = linetypes.album) +
+    scale_y_continuous(labels = scales::percent)
+)
 
-pj.setlists |> 
+pj.setlists |>
   filter(
     !is.na(album)
     # ,album != 'Other'
-  ) |> 
-  mutate(month = floor_date(as.Date(event_date), 'month')) |> 
+  ) |>
+  mutate(month = floor_date(as.Date(event_date), "month")) |>
   group_by(
-    month, 
-    album) |> 
-  summarize(count = n(), .groups = 'drop_last') |> 
-  mutate(freq = count / sum(count)) |> 
-  ungroup() |> 
+    month,
+    album
+  ) |>
+  summarize(count = n(), .groups = "drop_last") |>
+  mutate(freq = count / sum(count)) |>
+  ungroup() |>
   ggplot(aes(x = month, y = freq, group = album, color = album, linetype = album)) +
   geom_line(linewidth = 1) +
   theme(
     legend.title = element_blank(),
-    legend.direction = 'vertical',
-    legend.position = 'right'
+    legend.direction = "vertical",
+    legend.position = "right"
   ) +
   scale_color_manual(values = colors.album) +
   scale_linetype_manual(values = linetypes.album) +
   scale_y_continuous(labels = scales::percent) +
   facet_wrap(~album)
 
-pj.setlists |> 
+pj.setlists |>
   filter(
     !is.na(album)
     # ,album != 'Other'
-  ) |> 
-  mutate(month = floor_date(as.Date(event_date), 'month')) |> 
+  ) |>
+  mutate(month = floor_date(as.Date(event_date), "month")) |>
   group_by(
-    month, 
-    album) |> 
-  summarize(count = n(), .groups = 'drop_last') |> 
-  mutate(freq = count / sum(count)) |> 
-  ungroup() |> 
-  select(-count) |> 
-  pivot_wider(names_from = 'album', values_from = 'freq') |> 
-  clean_names() |> 
-  mutate_if(is.numeric, ~replace(., is.na(.), 0)) |>
-  mutate(total = ten + vs + vitalogy + no_code + yield + binaural + riot_act + pearl_jam + backspacer + lightning_bolt + gigaton + dark_matter + other) |> 
+    month,
+    album
+  ) |>
+  summarize(count = n(), .groups = "drop_last") |>
+  mutate(freq = count / sum(count)) |>
+  ungroup() |>
+  select(-count) |>
+  pivot_wider(names_from = "album", values_from = "freq") |>
+  clean_names() |>
+  mutate_if(is.numeric, ~ replace(., is.na(.), 0)) |>
+  mutate(total = ten + vs + vitalogy + no_code + yield + binaural + riot_act + pearl_jam + backspacer + lightning_bolt + gigaton + dark_matter + other) |>
   View()
 
 # trying to make area plot of the above
-  # ggplot(aes(x = month, y = freq, fill = album)) +
-  # geom_area() +
-  # theme(
-  #   legend.title = element_blank(),
-  #   legend.direction = 'vertical',
-  #   legend.position = 'right'
-  # ) +
-  # scale_fill_manual(values = colors_album) +
-  # scale_y_continuous(labels = scales::percent) 
+# ggplot(aes(x = month, y = freq, fill = album)) +
+# geom_area() +
+# theme(
+#   legend.title = element_blank(),
+#   legend.direction = 'vertical',
+#   legend.position = 'right'
+# ) +
+# scale_fill_manual(values = colors_album) +
+# scale_y_continuous(labels = scales::percent)
 
 # Random set history questions ----
 
@@ -316,37 +351,41 @@ song.list <- c("Breath", "State of Love and Trust", "Chloe Dancer/Crown of Thorn
 # song.list <- c("Harvest Moon")
 
 
-pj.agg <- getSongAgg(pj.setlists) |> 
+pj.agg <- getSongAgg(pj.setlists) |>
   full_join(
     bind_rows(mget(ls(pattern = "^album."))),
-    by = 'song_name') |> 
+    by = "song_name"
+  ) |>
   mutate(
-    album = if_else(!is.na(album), album, 'Cover Song')) 
+    album = if_else(!is.na(album), album, "Cover Song")
+  )
 
-pj.setlists |> 
-  filter(song_name %in% song.list) |> 
-  group_by(event_id) |> 
-  summarize(count = n(), .groups = 'drop') |> 
-  filter(count == length(song.list)) |> 
-  select(event_id) |> 
-  inner_join(pj.setlists, by = 'event_id') |> 
-  distinct(event_date, venue_name, city) |> 
+pj.setlists |>
+  filter(song_name %in% song.list) |>
+  group_by(event_id) |>
+  summarize(count = n(), .groups = "drop") |>
+  filter(count == length(song.list)) |>
+  select(event_id) |>
+  inner_join(pj.setlists, by = "event_id") |>
+  distinct(event_date, venue_name, city) |>
   View()
 
 # Quantifying event uniqueness ----
 
-dm.song.p <- dm.tour.agg |> 
-  select(p) |> 
-  mutate(p = if_else(is.na(p), .0001, p)) |> 
+dm.song.p <- dm.tour.agg |>
+  select(p) |>
+  mutate(p = if_else(is.na(p), .0001, p)) |>
   pull()
 
-dm.events <- dm.tour |> distinct(event_id) |> pull()
+dm.events <- dm.tour |>
+  distinct(event_id) |>
+  pull()
 
 # create empty df to store loop output
-dm.event.uniqueness <- 
+dm.event.uniqueness <-
   data.frame(
     event_id = character(),
-    p_rare = double(),       
+    p_rare = double(),
     p_unlikely = double(),
     p_likely = double(),
     p_standards = double(),
@@ -356,93 +395,97 @@ dm.event.uniqueness <-
     iteration = double()
   )
 
-for (event in dm.events){
-
-  dm.event <- dm.tour |> 
-    filter(event_id == event) |> 
-    inner_join(dm.tour.agg |> 
-      select(song_name, p),
-    by = 'song_name') |> 
-    select(p) |> 
+for (event in dm.events) {
+  dm.event <- dm.tour |>
+    filter(event_id == event) |>
+    inner_join(
+      dm.tour.agg |>
+        select(song_name, p),
+      by = "song_name"
+    ) |>
+    select(p) |>
     pull()
 
   event.df <-
     dm.tour |>
-      filter(event_id == event) |> 
-      inner_join(
-        dm.tour.agg |>
-          select(song_name, p_bin),
-        by = 'song_name') |>
-      group_by(event_id, p_bin) |>
-      summarize(count = n(), .groups = 'drop_last') |> 
-      mutate(freq = count / sum(count)) |> 
-      ungroup() |> 
-      select(-count) |> 
-      mutate(p_bin = paste('p', p_bin)) |> 
-      pivot_wider(names_from = p_bin, values_from = freq) |> 
-      clean_names() |> 
-      bind_cols(
-        dm.tour |> 
-          filter(event_id == event) |> 
-          filter(song_position == 1) |>
-          select(song_name) |> 
-          inner_join(dm.tour.openers, by = 'song_name') |> 
-        select(opener_count)) |> 
+    filter(event_id == event) |>
+    inner_join(
+      dm.tour.agg |>
+        select(song_name, p_bin),
+      by = "song_name"
+    ) |>
+    group_by(event_id, p_bin) |>
+    summarize(count = n(), .groups = "drop_last") |>
+    mutate(freq = count / sum(count)) |>
+    ungroup() |>
+    select(-count) |>
+    mutate(p_bin = paste("p", p_bin)) |>
+    pivot_wider(names_from = p_bin, values_from = freq) |>
+    clean_names() |>
+    bind_cols(
+      dm.tour |>
+        filter(event_id == event) |>
+        filter(song_position == 1) |>
+        select(song_name) |>
+        inner_join(dm.tour.openers, by = "song_name") |>
+        select(opener_count)
+    ) |>
     select(
       event_id,
       p_rare, p_unlikely, p_likely, p_standards,
       opener_count
-)
+    )
 
-  for (iteration in 1:100){
-
+  for (iteration in 1:100) {
     dm.sample.p <-
-      sample(song.names, num.songs.played, FALSE, weights) |> 
-      as.data.frame() |> 
-      setNames('song_name') |> 
+      sample(song.names, num.songs.played, FALSE, weights) |>
+      as.data.frame() |>
+      setNames("song_name") |>
       inner_join(
         dm.tour.agg,
-        by = 'song_name') |>
-      select(p) |> 
+        by = "song_name"
+      ) |>
+      select(p) |>
       pull()
-    
+
     var_p <- var.test(dm.sample.p, dm.event, alternative = "two.sided")$p.value
     t_p <- t.test(dm.sample.p, dm.event, var.equal = TRUE)$p.value
 
-    iteration.df <- 
-      event.df |> 
+    iteration.df <-
+      event.df |>
       bind_cols(
-      'variance_p' = var_p,
-      'mean_p' = t_p) |> 
+        "variance_p" = var_p,
+        "mean_p" = t_p
+      ) |>
       mutate(iteration = iteration)
-    
-    dm.event.uniqueness <- 
+
+    dm.event.uniqueness <-
       dm.event.uniqueness |>
       bind_rows(iteration.df)
 
     rm(var_p, t_p)
   }
-
 }
 
 dm.event.uniqueness <-
-  dm.event.uniqueness |> 
-  select(-iteration) |> 
-  group_by(event_id) |> 
-  summarise_all(mean, .groups = 'drop') |> 
+  dm.event.uniqueness |>
+  select(-iteration) |>
+  group_by(event_id) |>
+  summarise_all(mean, .groups = "drop") |>
   inner_join(
-    dm.tour |> 
+    dm.tour |>
       distinct(event_id, event_date, city, state, venue_name),
-    by = 'event_id'
-  ) |> 
-  mutate(event_id = as.numeric(event_id)) |> 
-  arrange(event_id) |> 
+    by = "event_id"
+  ) |>
+  mutate(event_id = as.numeric(event_id)) |>
+  arrange(event_id) |>
   select(
-    event_date, 
+    event_date,
     city, state, venue_name,
     variance_p, mean_p,
     p_rare, p_unlikely, p_likely, p_standards,
-    opener_count) |> 
+    opener_count
+  ) |>
   mutate(
     dim_rare = 1 - p_rare,
     dim_opener = 1 / opener_count,
@@ -451,25 +494,23 @@ dm.event.uniqueness <-
     uniqueness_factor = dim_rare * dim_opener * dim_var * dim_mean
   )
 
-  dm.event.uniqueness |> 
-    select(event_date, venue_name, city, state, uniqueness_factor) |> 
-    arrange(desc(uniqueness_factor)) |> 
-    View()
-
-dm.tour |> 
-  filter(city == 'Las Vegas', event_date == '2024-05-16') |> 
+dm.event.uniqueness |>
+  select(event_date, venue_name, city, state, uniqueness_factor) |>
+  arrange(desc(uniqueness_factor)) |>
   View()
 
-dm.tour |> 
+dm.tour |>
+  filter(city == "Las Vegas", event_date == "2024-05-16") |>
+  View()
+
+dm.tour |>
   inner_join(
     dm.tour.agg |>
       select(song_name, p),
-    by = 'song_name') |> 
-  mutate(event_id = paste0(event_id, ': ', venue_name)) |> 
-  select(event_id, p) |> 
+    by = "song_name"
+  ) |>
+  mutate(event_id = paste0(event_id, ": ", venue_name)) |>
+  select(event_id, p) |>
   ggplot(aes(x = p)) +
   geom_density() +
-  facet_wrap(.~event_id) 
-
-
-
+  facet_wrap(. ~ event_id)

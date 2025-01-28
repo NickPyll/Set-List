@@ -277,6 +277,7 @@ getSongAgg <- function(input_data) {
     summarise(
       avg_song_position = mean(song_position),
       times_played = n(),
+      first_played = min(event_date),
       num_events = length(unique(event_id)),
       .groups = "drop"
     ) |>

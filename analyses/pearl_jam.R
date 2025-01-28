@@ -1,18 +1,30 @@
 # This code analyzed the band's set list leading up to the Baltimore
 # show, as well as throughout the entire Dark Matter Tour
 
-# Setup ----
+# set up environment ----
 
 source("util/setup.R")
 source("util/setlist_functions.R")
+library(tmap)
+library(sf)
+library(RColorBrewer)
 
-# Load Data ----
+# load data ----
 
 # bring album tracklists in
 source("data/pj_albums.R")
 
 # my shows
-np.shows <- c("1996-10-04", "1998-08-31", "2000-08-03", "2003-04-15", "2016-04-21", "2022-09-22", "2024-09-12")
+np.shows <-
+  as.Date(
+    c(
+      "1996-10-04", "1998-08-31",
+      "2000-08-03", "2003-04-15",
+      "2016-04-21",
+      "2022-09-22", "2024-09-12",
+      "2025-05-11", "2025-05-13"
+    )
+  )
 
 # Pull data from setlist.fm API
 # Band Name (required)
@@ -28,31 +40,110 @@ pj.setlists <- getSongInfo(
   mutate(
     album = if_else(is.na(album) & cover == TRUE, "Other", album),
     album = factor(album, levels = levels.album),
+    np_show = ifelse(as.Date(event_date) %in% np.shows, 1, 0)
   ) |>
   select(
     "event_id", "event_date",
+    "np_show",
     "venue_name", "city", "state", "country", "latitude", "longitude",
     "song_position", "song_name", "album", "year_released", "album_detail", "cover", "original_artist"
   )
 
-# Dark Matter Tour ----
+pj.setlists <-
+  pj.setlists |>
+  filter(song_name != "Dark Entree") |>
+  select(-song_position) |>
+  group_by(event_id) |>
+  mutate(song_position = row_number()) |>
+  ungroup()
+
+# songs that need to be cleaned up
+pj.setlists |>
+  filter(
+    is.na(album),
+    cover == "FALSE"
+  ) |>
+  distinct(song_name) |>
+  View()
+
+pj.agg <- getSongAgg(pj.setlists) |>
+  full_join(
+    bind_rows(mget(ls(pattern = "^album."))),
+    by = "song_name"
+  ) |>
+  mutate(
+    album = if_else(!is.na(album), album, "Cover Song")
+  )
+
+pj.full <-
+  pj.setlists |>
+  left_join(
+    pj.agg |>
+      select(
+        song_name,
+        first_played,
+        avg_song_position,
+        times_played, num_events,
+        p, p_bin
+      ),
+    by = "song_name"
+  ) |>
+  select(
+    event_id, event_date,
+    venue_name, city, state, country, latitude, longitude,
+    song_position, song_name,
+    cover, original_artist,
+    album, album_detail, year_released,
+    first_played, times_played, num_events,
+    avg_song_position,
+    p, p_bin
+  )
+
+
+write.csv(pj.full, "pearljam_2025-01-27.csv")
+
+pj.full |>
+  mutate(x = times_played - num_events) |>
+  filter(x > 0) |>
+  View()
+# dark matter tour ----
 # The Dark Matter Tour kicked off May 4, 2024
 # and will end November 21, 2024
 
+
+## prepare data ----
 # filter to dark matter tour
 dm.tour <- pj.setlists |>
   filter(
     event_date >= as.Date("2024-05-04"),
-    event_date <= as.Date("2024-11-21")
+    event_date <= as.Date("2024-11-23")
   )
 
 # what songs opened dark matter shows
 dm.tour.openers <-
   dm.tour |>
-  filter(song_position == 1) |>
+  filter(song_name != "Dark Entree") |>
+  group_by(event_id) |>
+  filter(row_number() == 1) |>
   group_by(song_name) |>
   summarize(opener_count = n(), .groups = "drop") |>
   arrange(desc(opener_count))
+
+# aggregate by song
+dm.tour.agg <- getSongAgg(dm.tour) |>
+  full_join(
+    bind_rows(mget(ls(pattern = "^album."))),
+    by = "song_name"
+  ) |>
+  mutate(
+    song_type =
+      as.factor(if_else(cover == "TRUE", "cov",
+        if_else(album == "Dark Matter", "dm", "prev")
+      )),
+    album = if_else(!is.na(album), album, "Cover Song")
+  )
+
+## exploration ----
 
 # whoa some interesting openers...what opened each show?
 dm.tour |>
@@ -72,20 +163,6 @@ dm.tour |>
     legend.position = "none"
   ) +
   scale_fill_manual(values = colors.album)
-
-# aggregate by song
-dm.tour.agg <- getSongAgg(dm.tour) |>
-  full_join(
-    bind_rows(mget(ls(pattern = "^album."))),
-    by = "song_name"
-  ) |>
-  mutate(
-    song_type =
-      as.factor(if_else(cover == "TRUE", "cov",
-        if_else(album == "Dark Matter", "dm", "prev")
-      )),
-    album = if_else(!is.na(album), album, "Cover Song")
-  )
 
 # song frequency on Dark Matter Tour
 dm.tour.agg |>
@@ -110,10 +187,24 @@ dm.tour.agg |>
     x = NULL,
     y = NULL,
     title = "Will you hear your favorite Pearl Jam song?",
-    subtitle = "Predictions for the 2024 Dark Matter tour^",
+    subtitle = "Predictions for the 2025 Dark Matter tour^",
     caption = "^Source: All Dark Matter performances from setlist.fm"
   ) +
   scale_y_continuous(labels = scales::percent)
+
+# songs that have not been played on this tour
+dm.tour.agg |>
+  filter(is.na(times_played)) |>
+  select(album, song_name) |>
+  View()
+
+# songs rarely played on this tour
+dm.tour.agg |>
+  filter(times_played < 3) |>
+  select(album, song_name) |>
+  View()
+
+## baltimore analysis ----
 
 # songs played in Baltimore
 dm.tour.agg |>
@@ -151,21 +242,11 @@ dm.tour.agg |>
   scale_y_continuous(labels = scales::percent)
 # 1100 x 1900 <- good export dimensions
 
-# songs that have not been played on this tour
-dm.tour.agg |>
-  filter(is.na(times_played)) |>
-  select(album, song_name) |>
-  View()
 
-# songs rarely played on this tour
-dm.tour.agg |>
-  filter(times_played < 3) |>
-  select(album, song_name) |>
-  View()
-
-# Setlist Prediction ----
+# setlist prediction ----
 # Creating a process for predicting a setlist
 
+## model setup and build ----
 num.songs.played <-
   dm.tour |>
   group_by(event_id) |>
@@ -177,11 +258,15 @@ song.names <-
   dm.tour.agg |>
   filter(!is.na(times_played)) |>
   select(song_name) |>
+  filter(song_name != "Dark Entree") |>
   pull()
 
 weights <-
   dm.tour.agg |>
-  filter(!is.na(times_played)) |>
+  filter(
+    !is.na(times_played),
+    song_name != "Dark Entree"
+  ) |>
   select(p) |>
   pull()
 
@@ -197,6 +282,8 @@ predicted.setlist <-
   arrange(avg_song_position)
 
 # predicted.setlist |> View()
+
+## baltimore prediction ----
 
 # from 9-11-24
 predicted.setlist <-
@@ -217,10 +304,7 @@ actual.setlist <-
   bind_cols(predicted_played = predicted.setlist) |>
   select(actual_played, predicted_played, correct)
 
-# Album Presence on Tour -----
-
-pj.setlists |>
-  View()
+# show openers ----
 
 # what songs opened all time
 pj.setlists |>
@@ -229,7 +313,6 @@ pj.setlists |>
   summarize(count = n(), .groups = "drop") |>
   arrange(desc(count)) |>
   View()
-
 
 pj.setlists |>
   filter(song_position == 1) |>
@@ -245,21 +328,13 @@ pj.setlists |>
     caption = "^Source: All Pearl Jam performances from setlist.fm"
   )
 
-
 # whoa some interesting openers...what opened each show?
 pj.setlists |>
   filter(song_position == 1) |>
   select(song_name, event_date, venue_name, city, state, country) |>
   View()
 
-# songs that need to be cleaned up
-pj.setlists |>
-  filter(
-    is.na(album),
-    cover == "FALSE"
-  ) |>
-  distinct(song_name) |>
-  View()
+# Album Presence on Tour -----
 
 ggplotly(
   pj.setlists |>
@@ -343,22 +418,13 @@ pj.setlists |>
 # scale_fill_manual(values = colors_album) +
 # scale_y_continuous(labels = scales::percent)
 
-# Random set history questions ----
+# random set history questions ----
 
 # when have these songs appeared on same set
-song.list <- c("Breath", "State of Love and Trust", "Chloe Dancer/Crown of Thorns")
-# song.list <- c("Footsteps", "Crazy Mary")
+# song.list <- c("Breath", "State of Love and Trust", "Chloe Dancer/Crown of Thorns")
+# song.list <- c("Once", "Alive", "Footsteps")
+song.list <- c("Footsteps", "Crazy Mary")
 # song.list <- c("Harvest Moon")
-
-
-pj.agg <- getSongAgg(pj.setlists) |>
-  full_join(
-    bind_rows(mget(ls(pattern = "^album."))),
-    by = "song_name"
-  ) |>
-  mutate(
-    album = if_else(!is.na(album), album, "Cover Song")
-  )
 
 pj.setlists |>
   filter(song_name %in% song.list) |>
@@ -370,7 +436,7 @@ pj.setlists |>
   distinct(event_date, venue_name, city) |>
   View()
 
-# Quantifying event uniqueness ----
+# event uniqueness ----
 
 dm.song.p <- dm.tour.agg |>
   select(p) |>
@@ -514,3 +580,139 @@ dm.tour |>
   ggplot(aes(x = p)) +
   geom_density() +
   facet_wrap(. ~ event_id)
+
+# np history ----
+
+np.setlists <-
+  pj.setlists |>
+  filter(np_show == 1)
+
+np.agg <- getSongAgg(np.setlists)
+
+pj.agg |>
+  left_join(
+    np.agg |>
+      select(song_name) |>
+      mutate(np_show = 1),
+    by = "song_name"
+  ) |>
+  filter(
+    times_played >= 1,
+    cover == FALSE
+  ) |>
+  mutate(np_show = factor(if_else(!is.na(np_show), "yes", "no"), levels = c("yes", "no"))) |>
+  ggplot(aes(x = reorder(song_name, times_played), y = p, fill = np_show)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(
+    labels = c("NP has seen", "NP has not seen"),
+    values = c("#241773", "grey70")
+  ) +
+  coord_flip() +
+  theme(
+    legend.position = c(.7, .2),
+    legend.direction = "vertical",
+    legend.title = element_blank()
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Has NP seen song live?",
+    caption = "^Source: All Pearl Jam performances from setlist.fm"
+  ) +
+  scale_y_continuous(labels = scales::percent)
+
+
+# map
+pj.locations <-
+  pj.setlists |>
+  filter(!is.na(latitude)) |>
+  mutate(
+    event_year = year(event_date),
+    latitude = as.numeric(latitude),
+    longitude = as.numeric(longitude)
+  ) |>
+  distinct(
+    event_year, event_date,
+    np_show,
+    venue_name,
+    city, state, country,
+    latitude, longitude
+  ) |>
+  mutate(is_pj = 1)
+
+pj.locations |>
+  filter(state == "Texas") |>
+  View()
+
+pj.locations |>
+  filter(state == "North Carolina") |>
+  View()
+
+pj.locations_L10Y <-
+  pj.locations |>
+  filter(event_year >= 2014)
+
+# |>
+#   st_as_sf(coords = c('longitude', 'latitude'), crs = 4326)
+
+# tmap_mode("view")
+# tmap_options(basemaps = c(leaflet::providers$Stamen.TonerLite,
+#                           leaflet::providers$OpenStreetMap,
+#                           leaflet::providers$Esri.WorldGrayCanvas))
+
+# pj.map <-
+#   tm_shape(pj.locations, name = 'Pearl Jam Show Locations') +
+#   tm_dots('is_pj', title = 'PJ', palette = c('black'), size = 0.1, legend.show = FALSE,
+#           id = 'event_date')
+
+# pj.map
+
+base_map <- map_data("world")
+
+ggplot() +
+  stat_density2d(data = pj.locations, aes(x = longitude, y = latitude, fill = ..level..), alpha = 0.5, geom = "polygon") +
+  geom_path(data = base_map, aes(x = long, y = lat, group = group), color = "grey50") +
+  geom_point(data = pj.locations, aes(x = longitude, y = latitude), color = "black", size = 2) +
+  scale_fill_gradientn(colours = rev(brewer.pal(7, "Spectral"))) +
+  coord_cartesian(xlim = c(-130, -60), ylim = c(25, 55)) +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "none",
+    plot.title = element_text(size = 24)
+  ) +
+  labs(title = "Locations of North American Pearl Jam Shows")
+
+ggplot() +
+  stat_density2d(data = pj.locations_L10Y, aes(x = longitude, y = latitude, fill = ..level..), alpha = 0.5, geom = "polygon") +
+  geom_path(data = base_map, aes(x = long, y = lat, group = group), color = "grey50") +
+  geom_point(data = pj.locations_L10Y, aes(x = longitude, y = latitude), color = "black", size = 2) +
+  scale_fill_gradientn(colours = rev(brewer.pal(7, "Spectral"))) +
+  coord_cartesian(xlim = c(-130, -60), ylim = c(25, 55)) +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "none",
+    plot.title = element_text(size = 24)
+  ) +
+  labs(
+    title = "Locations of North American Pearl Jam Shows",
+    subtitle = "2014 - 2024"
+  )
+
+ggplot() +
+  stat_density2d(data = pj.locations, aes(x = longitude, y = latitude, fill = ..level..), alpha = 0.5, geom = "polygon") +
+  geom_path(data = base_map, aes(x = long, y = lat, group = group), color = "grey50") +
+  geom_point(data = pj.locations, aes(x = longitude, y = latitude), color = "black", size = 1) +
+  scale_fill_gradientn(colours = rev(brewer.pal(7, "Spectral"))) +
+  coord_cartesian(xlim = c(-159, 175), ylim = c(-45, 65)) +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "none",
+    plot.title = element_text(size = 24)
+  ) +
+  labs(title = "Locations of Pearl Jam Shows")

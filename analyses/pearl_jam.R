@@ -43,11 +43,14 @@ pj.setlists <- getSongInfo(
     np_show = ifelse(as.Date(event_date) %in% np.shows, 1, 0)
   ) |>
   select(
-    "event_id", "event_date",
+    "tour",
+    "event_id", "event_date", "event_info",
     "np_show",
     "venue_name", "city", "state", "country", "latitude", "longitude",
-    "song_position", "song_name", "album", "year_released", "album_detail", "cover", "original_artist"
-  )
+    "tape",
+    "song_position", "song_name", "song_tag",
+    "album", "release_date", "album_detail", "cover", "original_artist"
+  ) 
 
 pj.setlists <-
   pj.setlists |>
@@ -55,7 +58,9 @@ pj.setlists <-
   select(-song_position) |>
   group_by(event_id) |>
   mutate(song_position = row_number()) |>
-  ungroup()
+  ungroup() |> 
+  arrange(event_date) |>
+  mutate(event_id = dense_rank(event_date))
 
 # songs that need to be cleaned up
 pj.setlists |>
@@ -93,19 +98,23 @@ pj.full <-
     venue_name, city, state, country, latitude, longitude,
     song_position, song_name,
     cover, original_artist,
-    album, album_detail, year_released,
+    album, album_detail, release_date,
     first_played, times_played, num_events,
     avg_song_position,
     p, p_bin
   )
 
+pj.full |>
+   |> 
+  View()
 
-write.csv(pj.full, "pearljam_2025-01-27.csv")
+# write.csv(pj.full, "pearljam_2025-01-27.csv")
 
 pj.full |>
   mutate(x = times_played - num_events) |>
   filter(x > 0) |>
   View()
+
 # dark matter tour ----
 # The Dark Matter Tour kicked off May 4, 2024
 # and will end November 21, 2024
@@ -116,7 +125,7 @@ pj.full |>
 dm.tour <- pj.setlists |>
   filter(
     event_date >= as.Date("2024-05-04"),
-    event_date <= as.Date("2024-11-23")
+    event_date <= as.Date("2025-06-01")
   )
 
 # what songs opened dark matter shows
@@ -423,8 +432,10 @@ pj.setlists |>
 # when have these songs appeared on same set
 # song.list <- c("Breath", "State of Love and Trust", "Chloe Dancer/Crown of Thorns")
 # song.list <- c("Once", "Alive", "Footsteps")
-song.list <- c("Footsteps", "Crazy Mary")
+# song.list <- c("Footsteps", "Crazy Mary")
 # song.list <- c("Harvest Moon")
+song.list <- c("Chloe Dancer/Crown of Thorns")
+
 
 pj.setlists |>
   filter(song_name %in% song.list) |>

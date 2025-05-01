@@ -87,7 +87,7 @@ getSetlistInfo <- function(artist_name, mbid) {
 
   # Loop through all pages (can hardcode for testing)
   pages <- total_pages
-  # pages <- 3 # limit pages for troubleshooting
+  # pages <- 2 # limit pages for troubleshooting
 
   for (page in 1:pages) {
     print(paste0("Scraping page ", page, " of ", pages)) # printing progress
@@ -107,13 +107,16 @@ getSetlistInfo <- function(artist_name, mbid) {
     for (i in 1:number_of_setlists) {
       new_data <- cbind(
         "event_id" = i + k,
+        # "event_id" = i,
         "event_date" = paste0(content(setlist_list)$setlist[[i]]$eventDate, ""),
         "country" = paste0(content(setlist_list)$setlist[[i]]$venue$city$country$name, ""),
         "state" = paste0(content(setlist_list)$setlist[[i]]$venue$city$state, ""),
         "city" = paste0(content(setlist_list)$setlist[[i]]$venue$city$name, ""),
         "venue_name" = paste0(content(setlist_list)$setlist[[i]]$venue$name, ""),
         "latitude" = paste0(content(setlist_list)$setlist[[i]]$venue$city$coords$lat, ""),
-        "longitude" = paste0(content(setlist_list)$setlist[[i]]$venue$city$coords$long, "")
+        "longitude" = paste0(content(setlist_list)$setlist[[i]]$venue$city$coords$long, ""),
+        "tour" = paste0(content(setlist_list)$setlist[[i]]$tour$name, ""),
+        "event_info" = paste0(content(setlist_list)$setlist[[i]]$info, "")
       )
 
       # add loop data to the main dataframe
@@ -172,8 +175,9 @@ getSongInfo <- function(artist_name, mbid = NULL) {
 
   # counter to help align event_ids -- otherwise starts over every 20
   # DEVNOTE: this logic fails when setlist.fm lists an upcoming show with no songs yet populated
-  # need to design a better way to handle that scneario but for now just subtract 2 instead of 1
-  k <- min(as.numeric(info_needed[[2]]$event_id)) - 1
+  # need to design a better way to handle that scenario but for now just subtract 2 instead of 1
+  k <- min(as.numeric(info_needed[[2]]$event_id))
+  # k <- min(as.numeric(info_needed[[2]]$event_id)) - 1
   # k <- min(as.numeric(info_needed[[2]]$event_id)) - 2 # see DEVNOTE above
 
   # pull pages parameter from last function
@@ -210,15 +214,16 @@ getSongInfo <- function(artist_name, mbid = NULL) {
           for (song in 1:song_count) {
             # Begin to create the new dataframe by combining the set number and song title.
             newdata <- cbind(
-              "event_id" = event + k,
+              # "event_id" = event + k,
+              "event_id" = k,
               "song_name" = info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$name
             )
 
-            # Next i want to see if the current song is a cover song or not. First try and allocate to 't'
-            t <- try(info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$cover$name)
+            # Is the song a cover song?
+            cover_try <- try(info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$cover$name)
 
-            # If class of 't' is NULL then it is not a cover song, else it is a cover song and grab the artist name
-            if ("NULL" %in% class(t)) {
+            # If class of 'cover_try' is NULL then it is not a cover song, else it is a cover song and grab the artist name
+            if ("NULL" %in% class(cover_try)) {
               newdata <- cbind(newdata,
                 "cover" = FALSE,
                 "original_artist" = "N/A"
@@ -230,15 +235,45 @@ getSongInfo <- function(artist_name, mbid = NULL) {
               )
             }
 
+            # Is the song tagged?
+            tag_try <- try(info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$info)
+
+            # If class of 'tag_try' is NULL then it is not tagged, else it is tagged and grab info
+            if ("NULL" %in% class(tag_try)) {
+              newdata <- cbind(newdata,
+                "song_tag" = "N/A"
+              )
+            } else {
+              newdata <- cbind(newdata,
+                "song_tag" = info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$info
+              )
+            }
+
+            # Is the song a taped performance?
+            tape_try <- try(info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$tape)
+
+            # If class of 'tape_try' is NULL then it is not a tape, else it is a tape and needs to be flagged
+            if ("NULL" %in% class(tape_try)) {
+              newdata <- cbind(newdata,
+                "tape" = FALSE
+              )
+            } else {
+              newdata <- cbind(newdata,
+                "tape" = TRUE
+              )
+            }
+
+
             # Bind the new data and the old data together in a dataset.
             setlist_info <- rbind(setlist_info, newdata)
           }
         }
+        k <- k + 1
       }
     }
 
     # iterate counter for event_id
-    k <- event + k
+    # k <- event + k
   }
 
   # bring venue_Info dataframe in from previous function

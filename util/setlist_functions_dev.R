@@ -14,7 +14,7 @@ k <- 0
 #     add_headers("x-api-key" = Sys.getenv('SETLISTFM_API_KEY'))))$itemsPerPage)
 
 # pages <- round(total_events / events_per_page)
-pages <- 5
+pages <- 2
 
 for (page in 1:pages) {
   print(paste0("Scraping page ", page, " of ", pages))
@@ -49,14 +49,16 @@ info_needed <- list(content_list, venue_info, pages)
 dataset <- data.frame()
 # DEVNOTE: this logic fails when setlist.fm lists an upcoming show with no songs yet populated
 # need to design a better way to handle that scneario but for now just subtract 2 instead of 1
-k <- min(as.numeric(info_needed[[2]]$event_id)) - 1
+k <- min(as.numeric(info_needed[[2]]$EventID))
 # k <- min(as.numeric(info_needed[[2]]$event_id)) - 2 # see DEVNOTE above
 pages <- info_needed[[3]]
 
 for (page in 1:pages) {
+  # page <- 1
   events <- info_needed[[1]][[page]]$itemsPerPage
 
   for (event in 1:events) {
+    # event <- 1
     print(paste0("Preparing page ", page, " of ", pages, ": event ", event, " of ", events))
 
     number_sets <- sum(lengths(info_needed[[1]][[page]]$setlist[[event]]$sets))
@@ -65,7 +67,7 @@ for (page in 1:pages) {
         song_count <- length(lengths(info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song))
         for (song in 1:song_count) {
           newdata <- cbind(
-            "EventID" = event + k,
+            "EventID" = k,
             "SongName" = info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$name
           )
           t <- try(info_needed[[1]][[page]]$setlist[[event]]$sets$set[[set]]$song[[song]]$cover$name)
@@ -82,11 +84,10 @@ for (page in 1:pages) {
           }
           dataset <- rbind(dataset, newdata)
         }
+        k <- k + 1
       }
     }
   }
-
-  k <- event + k
 }
 
 venue_info <- as.data.frame(info_needed[[2]])

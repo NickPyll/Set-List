@@ -348,8 +348,9 @@ dm.tour.agg |>
   #   labels = c('Not Played in Raleigh', 'Played Once in Raleigh', 'Played Both Raleigh Nights'),
   #   values = c('#D3DDDC', '#C7B19C', '#446455')) +
   scale_fill_manual(
-    labels = c("Not Played in Raleigh", "Played in Raleigh"),
-    values = c("#D3DDDC", "#446455")
+    labels = c("once" = "Played in Raleigh May 11, 2025"),
+    values = c("none" = "#d4d4d4", "once" = "#962c1a"),
+    breaks = "once"
   ) +
   coord_flip() +
   theme(
@@ -360,14 +361,12 @@ dm.tour.agg |>
   labs(
     x = NULL,
     y = NULL,
-    # title = "Raleigh May 11 & 13, 2024",
-    title = "Raleigh May 11, 2024",
+    title = "Song Frequency Dark Matter Tour",
+    subtitle = "As of May 11, 2024",
     caption = "^Source: All Dark Matter performances from setlist.fm"
   ) +
   scale_y_continuous(labels = scales::percent)
-# 1100 x 1900 <- good export dimensions
-
-
+# 1100 x 2100 <- good export dimensions
 
 # show openers ----
 

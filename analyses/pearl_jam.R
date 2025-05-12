@@ -50,15 +50,12 @@ pj.setlists <- getSongInfo(
     "tape",
     "song_position", "song_name", "song_tag",
     "album", "release_date", "album_detail", "cover", "original_artist"
-  ) 
-
-pj.setlists <-
-  pj.setlists |>
+  ) |>
   filter(song_name != "Dark Entree") |>
   select(-song_position) |>
   group_by(event_id) |>
   mutate(song_position = row_number()) |>
-  ungroup() |> 
+  ungroup() |>
   arrange(event_date) |>
   mutate(event_id = dense_rank(event_date))
 
@@ -103,10 +100,6 @@ pj.full <-
     avg_song_position,
     p, p_bin
   )
-
-pj.full |>
-   |> 
-  View()
 
 # write.csv(pj.full, "pearljam_2025-01-27.csv")
 
@@ -313,6 +306,69 @@ actual.setlist <-
   bind_cols(predicted_played = predicted.setlist) |>
   select(actual_played, predicted_played, correct)
 
+## raleigh analysis ----
+
+# songs played in Raleigh
+dm.tour.agg |>
+  # filter(Cover == 'FALSE') |>
+  filter(
+    times_played >= 1,
+    !is.na(song_type)
+  ) |>
+  left_join(
+    dm.tour |>
+      filter(event_date == "2025-05-11") |>
+      select(song_name) |>
+      mutate(raleigh_n1 = 1),
+    by = "song_name"
+  ) |>
+  # left_join(
+  #   dm.tour |>
+  #     filter(event_date == "2025-05-13") |>
+  #     select(song_name) |>
+  #     mutate(raleigh_n2 = 1),
+  #   by = "song_name"
+  # ) |>
+  mutate(
+    # raleigh = case_when(
+    #   raleigh_n1 == 1 & raleigh_n2 == 1 ~ "both",
+    #   (raleigh_n1 == 1 & is.na(raleigh_n2)) | (is.na(raleigh_n1) & raleigh_n2 == 1) ~ "once",
+    #   TRUE ~ "none"
+    # ),
+    # raleigh = factor(raleigh, levels = c("none", "once", "both"))
+    raleigh = case_when(
+      raleigh_n1 == 1 ~ "once",
+      is.na(raleigh_n1) ~ "none"
+    ),
+    raleigh = factor(raleigh, levels = c("none", "once"))
+  ) |>
+  ggplot(aes(x = reorder(song_name, times_played), y = p, fill = raleigh)) +
+  geom_bar(stat = "identity") +
+  # scale_fill_manual(
+  #   labels = c('Not Played in Raleigh', 'Played Once in Raleigh', 'Played Both Raleigh Nights'),
+  #   values = c('#D3DDDC', '#C7B19C', '#446455')) +
+  scale_fill_manual(
+    labels = c("Not Played in Raleigh", "Played in Raleigh"),
+    values = c("#D3DDDC", "#446455")
+  ) +
+  coord_flip() +
+  theme(
+    legend.position = c(.7, .2),
+    legend.direction = "vertical",
+    legend.title = element_blank()
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    # title = "Raleigh May 11 & 13, 2024",
+    title = "Raleigh May 11, 2024",
+    caption = "^Source: All Dark Matter performances from setlist.fm"
+  ) +
+  scale_y_continuous(labels = scales::percent)
+# 1100 x 1900 <- good export dimensions
+
+
+
 # show openers ----
 
 # what songs opened all time
@@ -446,6 +502,15 @@ pj.setlists |>
   inner_join(pj.setlists, by = "event_id") |>
   distinct(event_date, venue_name, city) |>
   View()
+
+# How many times has Indifference opened?
+pj.setlists |>
+  filter(
+    song_name == "Indifference",
+    song_position == 1
+  ) |>
+  View()
+
 
 # event uniqueness ----
 

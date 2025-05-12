@@ -111,6 +111,7 @@ album.bsides <-
     "Leatherman", "1997-12-22", "Given to Fly single",
     "U", "1998-05-05", "Wishlist single",
     "Untitled", "1998-11-24", "Live on Two Legs",
+    "Whale Song", "1999-08-10", "MOM III: Music for Our Mother Ocean",
     "Down", "2002-10-08", "I Am Mine single",
     "Undone", "2002-10-08", "I Am Mine single",
     "All Night", "2003-11-11", "Lost Dogs",

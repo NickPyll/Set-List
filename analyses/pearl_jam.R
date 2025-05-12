@@ -525,7 +525,7 @@ dm.events <- dm.tour |>
 # create empty df to store loop output
 dm.event.uniqueness <-
   data.frame(
-    event_id = character(),
+    event_id = double(),
     p_rare = double(),
     p_unlikely = double(),
     p_likely = double(),
@@ -537,6 +537,8 @@ dm.event.uniqueness <-
   )
 
 for (event in dm.events) {
+  print(event)
+
   dm.event <- dm.tour |>
     filter(event_id == event) |>
     inner_join(
@@ -573,7 +575,7 @@ for (event in dm.events) {
     ) |>
     select(
       event_id,
-      p_rare, p_unlikely, p_likely, p_standards,
+      starts_with("p_"),
       opener_count
     )
 
@@ -692,6 +694,7 @@ pj.agg |>
     x = NULL,
     y = NULL,
     title = "Has NP seen song live?",
+    subtitle = "Updated May 11, 2025",
     caption = "^Source: All Pearl Jam performances from setlist.fm"
   ) +
   scale_y_continuous(labels = scales::percent)

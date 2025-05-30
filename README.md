@@ -17,3 +17,7 @@ Look for the `guided_example.R` for examples of how to use the following fuction
 `getSongInfo` will call `getArtistInfo` unless mbid provided. Function then calls `getSetlistInfo` and processes the output of that function.
 
 `getSongAgg` Calculates percentages and aggregates by song.
+
+## Note of Acknowledgment
+
+The functions portion of this work borrows VERY heavily from Ben Cross -- while I had manual workarounds for much of this stuff, his elegant functions provided a foundation for me to build on. While I've modified and added to those functions substantially, this work would not exist in its current form if not for the work he shared.
